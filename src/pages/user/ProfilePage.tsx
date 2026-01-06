@@ -1,33 +1,106 @@
-import { useState } from "react";
-import { Mail, Building2, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, Building2, Upload, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { api, Organization, ApiError } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
-  const [name, setName] = useState("John Doe");
+  const { user, refreshUser } = useAuth();
+  const [name, setName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(true);
 
-  // Mock user data
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    emailVerified: true,
-    avatar: null,
-    initials: "JD",
-    organizations: [
-      { name: "Acme Corp", role: "Admin" },
-      { name: "Beta Inc", role: "Member" },
-    ],
+  // Sync local name state with user data
+  useEffect(() => {
+    if (user?.full_name) {
+      setName(user.full_name);
+    }
+  }, [user?.full_name]);
+
+  // Fetch organizations
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const response = await api.users.organizations();
+        setOrganizations(response.organizations);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          toast({
+            title: "Error loading organizations",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } finally {
+        setOrgsLoading(false);
+      }
+    };
+
+    fetchOrgs();
+  }, []);
+
+  const getInitials = (fullName: string | null) => {
+    if (!fullName) return "?";
+    return fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your full name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await api.users.updateMe({ full_name: name.trim() });
+      await refreshUser();
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your name has been updated successfully",
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast({
+          title: "Update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setName(user?.full_name || "");
     setIsEditing(false);
-    // Save logic here
   };
+
+  if (!user) {
+    return (
+      <div className="page-container flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -49,9 +122,9 @@ export default function ProfilePage() {
             {/* Avatar */}
             <div className="flex items-center gap-6">
               <Avatar className="w-20 h-20">
-                <AvatarImage src={user.avatar || undefined} />
+                <AvatarImage src={user.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                  {user.initials}
+                  {getInitials(user.full_name)}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -74,15 +147,19 @@ export default function ProfilePage() {
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    disabled={isSaving}
                   />
-                  <Button onClick={handleSave}>Save</Button>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Save
+                  </Button>
+                  <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                     Cancel
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
-                  <span className="text-foreground">{user.name}</span>
+                  <span className="text-foreground">{user.full_name || "Not set"}</span>
                   <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
                     Edit
                   </Button>
@@ -103,7 +180,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <span className="text-foreground">{user.email}</span>
-                {user.emailVerified ? (
+                {user.email_verified ? (
                   <Badge variant="secondary" className="bg-success/10 text-success border-0">
                     <CheckCircle className="w-3 h-3 mr-1" />
                     Verified
@@ -126,22 +203,41 @@ export default function ProfilePage() {
             <CardDescription>Organizations you're a member of</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {user.organizations.map((org, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-4 h-4 text-primary" />
+            {orgsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : organizations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                You're not a member of any organizations yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {organizations.map((org) => (
+                  <div
+                    key={org.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      {org.logo_url ? (
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={org.logo_url} />
+                          <AvatarFallback>
+                            <Building2 className="w-4 h-4 text-primary" />
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                          <Building2 className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                      <span className="text-foreground font-medium">{org.name}</span>
                     </div>
-                    <span className="text-foreground font-medium">{org.name}</span>
+                    <Badge variant="secondary" className="capitalize">{org.role}</Badge>
                   </div>
-                  <Badge variant="secondary">{org.role}</Badge>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
