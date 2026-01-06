@@ -18,12 +18,30 @@ interface ApiResponse<T = unknown> {
 export interface User {
   id: string;
   email: string;
+  email_verified: boolean;
   full_name: string | null;
   avatar_url: string | null;
-  is_active: boolean;
-  is_verified: boolean;
+  status: string;
+  last_login_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  is_active: boolean;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationsResponse {
+  organizations: Organization[];
+  count: number;
 }
 
 export interface Session {
@@ -103,6 +121,8 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+
+    organizations: () => request<OrganizationsResponse>('/users/me/organizations'),
   },
 };
 
