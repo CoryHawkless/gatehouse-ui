@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordStrengthMeter, isPasswordValid } from "@/components/auth/PasswordStrengthMeter";
+import { BannerAlert } from "@/components/auth/BannerAlert";
+
+type RegistrationState = "form" | "success" | "disabled";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -12,20 +16,114 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<RegistrationState>("form");
+
+  const passwordsMatch = password === confirmPassword;
+  const canSubmit = 
+    name.trim() && 
+    email.trim() && 
+    isPasswordValid(password) && 
+    passwordsMatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
+    setError(null);
+
+    if (!passwordsMatch) {
+      setError("Passwords do not match");
       return;
     }
+
+    if (!isPasswordValid(password)) {
+      setError("Password does not meet requirements");
+      return;
+    }
+
     setIsLoading(true);
-    // Mock registration - will be replaced with actual auth
+
+    // Mock registration - will be replaced with actual API call
+    // POST /api/auth/register
     setTimeout(() => {
       setIsLoading(false);
-      navigate("/verify-email");
+      
+      // Simulate different responses
+      const mockResponse = "success" as RegistrationState | "error";
+      
+      if (mockResponse === "disabled") {
+        setState("disabled");
+      } else if (mockResponse === "error") {
+        setError("An error occurred. Please try again.");
+      } else {
+        setState("success");
+      }
     }, 1000);
   };
 
+  // Registration disabled state
+  if (state === "disabled") {
+    return (
+      <div className="auth-card text-center">
+        <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-6">
+          <Lock className="w-8 h-8 text-warning" />
+        </div>
+
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+          Registration unavailable
+        </h1>
+        <p className="text-muted-foreground mt-2 mb-6">
+          New account registration is currently invite-only. Please contact your administrator for an invitation.
+        </p>
+
+        <Link to="/login">
+          <Button variant="outline" className="w-full">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to sign in
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Success state - email sent
+  if (state === "success") {
+    return (
+      <div className="auth-card text-center">
+        <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
+          <Mail className="w-8 h-8 text-success" />
+        </div>
+
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+          Check your email
+        </h1>
+        <p className="text-muted-foreground mt-2 mb-6">
+          We've sent a verification link to <span className="font-medium text-foreground">{email}</span>. 
+          Click the link to verify your account and get started.
+        </p>
+
+        <div className="space-y-3">
+          <Link to="/login">
+            <Button className="w-full">
+              Continue to sign in
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+
+        <p className="text-sm text-muted-foreground mt-6">
+          Didn't receive the email?{" "}
+          <button 
+            onClick={() => setState("form")}
+            className="text-accent hover:underline font-medium"
+          >
+            Try again
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  // Registration form
   return (
     <div className="auth-card">
       <div className="text-center mb-8">
@@ -37,9 +135,17 @@ export default function RegisterPage() {
         </p>
       </div>
 
+      {error && (
+        <BannerAlert 
+          type="error" 
+          message={error} 
+          className="mb-6"
+        />
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="name">Display name</Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -50,6 +156,7 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               className="pl-10"
               required
+              autoComplete="name"
             />
           </div>
         </div>
@@ -66,6 +173,7 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10"
               required
+              autoComplete="email"
             />
           </div>
         </div>
@@ -82,12 +190,10 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10"
               required
-              minLength={8}
+              autoComplete="new-password"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Must be at least 8 characters
-          </p>
+          <PasswordStrengthMeter password={password} />
         </div>
 
         <div className="space-y-2">
@@ -102,11 +208,19 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10"
               required
+              autoComplete="new-password"
             />
           </div>
+          {confirmPassword && !passwordsMatch && (
+            <p className="text-xs text-destructive">Passwords do not match</p>
+          )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isLoading || !canSubmit}
+        >
           {isLoading ? (
             "Creating account..."
           ) : (
@@ -127,11 +241,11 @@ export default function RegisterPage() {
 
       <p className="text-center text-xs text-muted-foreground mt-4">
         By creating an account, you agree to our{" "}
-        <Link to="/terms" className="underline">
+        <Link to="/terms" className="underline hover:text-foreground">
           Terms of Service
         </Link>{" "}
         and{" "}
-        <Link to="/privacy" className="underline">
+        <Link to="/privacy" className="underline hover:text-foreground">
           Privacy Policy
         </Link>
       </p>
