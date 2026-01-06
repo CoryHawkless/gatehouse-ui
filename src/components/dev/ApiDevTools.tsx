@@ -11,7 +11,9 @@ interface ApiLog {
   url: string;
   requestBody?: unknown;
   status?: number;
+  statusText?: string;
   responseBody?: unknown;
+  responseHeaders?: Record<string, string>;
   duration?: number;
   error?: string;
 }
@@ -79,6 +81,12 @@ window.fetch = async function (input, init) {
     const response = await originalFetch.apply(this, [input, init]);
     const duration = Math.round(performance.now() - start);
 
+    // Extract response headers
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
     // Clone response to read body
     const cloned = response.clone();
     let responseBody: unknown;
@@ -90,7 +98,9 @@ window.fetch = async function (input, init) {
 
     updateApiLog(id, {
       status: response.status,
+      statusText: response.statusText,
       responseBody,
+      responseHeaders,
       duration,
     });
 
@@ -225,10 +235,36 @@ export default function ApiDevTools() {
         <ScrollArea className="w-1/2 p-3">
           {selectedLog ? (
             <div className="space-y-3 text-xs font-mono">
+              {/* Status & URL Summary */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={getStatusColor(selectedLog.status)} className="text-xs">
+                  {selectedLog.method}
+                </Badge>
+                {selectedLog.status && (
+                  <Badge 
+                    variant={getStatusColor(selectedLog.status)} 
+                    className={`text-xs ${selectedLog.status >= 400 ? 'bg-red-900/50 text-red-300' : ''}`}
+                  >
+                    {selectedLog.status} {selectedLog.statusText}
+                  </Badge>
+                )}
+                {selectedLog.duration && (
+                  <span className="text-slate-500">{selectedLog.duration}ms</span>
+                )}
+              </div>
+
               <div>
                 <div className="text-slate-500 mb-1">URL</div>
                 <div className="text-slate-200 break-all">{selectedLog.url}</div>
               </div>
+
+              {/* Network Error */}
+              {selectedLog.error && (
+                <div className="bg-red-950/50 border border-red-800 rounded p-2">
+                  <div className="text-red-400 font-semibold mb-1">Network Error</div>
+                  <div className="text-red-300">{selectedLog.error}</div>
+                </div>
+              )}
 
               {selectedLog.requestBody && (
                 <div>
@@ -239,20 +275,39 @@ export default function ApiDevTools() {
                 </div>
               )}
 
-              {selectedLog.responseBody && (
+              {/* Response Section with Status Context */}
+              {selectedLog.status && (
                 <div>
-                  <div className="text-slate-500 mb-1">Response</div>
-                  <pre className="bg-slate-800 p-2 rounded text-[10px] overflow-auto text-blue-400">
-                    {JSON.stringify(selectedLog.responseBody, null, 2)}
-                  </pre>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-slate-500">Response</span>
+                    {selectedLog.status >= 400 && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        Error Response
+                      </Badge>
+                    )}
+                  </div>
+                  {selectedLog.responseBody ? (
+                    <pre className={`bg-slate-800 p-2 rounded text-[10px] overflow-auto ${
+                      selectedLog.status >= 400 ? 'text-red-400 border border-red-800/50' : 'text-blue-400'
+                    }`}>
+                      {JSON.stringify(selectedLog.responseBody, null, 2)}
+                    </pre>
+                  ) : (
+                    <div className="text-slate-600 italic">No response body</div>
+                  )}
                 </div>
               )}
 
-              {selectedLog.error && (
-                <div>
-                  <div className="text-red-500 mb-1">Error</div>
-                  <div className="text-red-400">{selectedLog.error}</div>
-                </div>
+              {/* Response Headers (collapsible) */}
+              {selectedLog.responseHeaders && Object.keys(selectedLog.responseHeaders).length > 0 && (
+                <details className="group">
+                  <summary className="text-slate-500 cursor-pointer hover:text-slate-400">
+                    Response Headers ({Object.keys(selectedLog.responseHeaders).length})
+                  </summary>
+                  <pre className="bg-slate-800 p-2 rounded text-[10px] overflow-auto text-slate-400 mt-1">
+                    {JSON.stringify(selectedLog.responseHeaders, null, 2)}
+                  </pre>
+                </details>
               )}
             </div>
           ) : (
