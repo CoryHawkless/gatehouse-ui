@@ -33,6 +33,7 @@ import OrgAuditPage from "@/pages/org/OrgAuditPage";
 import OIDCClientsPage from "@/pages/org/OIDCClientsPage";
 
 import NotFound from "@/pages/NotFound";
+import ApiDevTools from "@/components/dev/ApiDevTools";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,9 @@ function AppRoutes() {
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      {/* Dev tools - only shown in development */}
+      <ApiDevTools />
     </AuthProvider>
   );
 }
