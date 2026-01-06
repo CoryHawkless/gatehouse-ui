@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Lock, Fingerprint, Smartphone, Shield, Plus, AlertTriangle, CheckCircle } from "lucide-react";
+import { Lock, Fingerprint, Smartphone, Shield, Plus, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { AddPasskeyWizard } from "@/components/security/AddPasskeyWizard";
 
 export default function SecurityPage() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showAddPasskey, setShowAddPasskey] = useState(false);
 
   // Mock security data
   const security = {
@@ -145,11 +146,11 @@ export default function SecurityPage() {
                     <Badge variant="secondary" className="ml-2 text-xs">Required</Badge>
                   )}
                 </CardTitle>
-                <CardDescription>
+              <CardDescription>
                   Use biometrics or security keys for passwordless login
                 </CardDescription>
               </div>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setShowAddPasskey(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add passkey
               </Button>
@@ -180,6 +181,15 @@ export default function SecurityPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AddPasskeyWizard
+        open={showAddPasskey}
+        onOpenChange={setShowAddPasskey}
+        onSuccess={(passkey) => {
+          console.log("Passkey added:", passkey);
+          setShowAddPasskey(false);
+        }}
+      />
     </div>
   );
 }
