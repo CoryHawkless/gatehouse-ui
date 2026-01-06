@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, ArrowLeft, ArrowRight } from "lucide-react";
+import { Mail, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BannerAlert } from "@/components/auth/BannerAlert";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -13,12 +14,15 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Mock API call - POST /api/auth/forgot-password
     setTimeout(() => {
       setIsLoading(false);
       setIsSubmitted(true);
     }, 1000);
   };
 
+  // Success state - always show neutral message (don't leak account existence)
   if (isSubmitted) {
     return (
       <div className="auth-card text-center">
@@ -30,19 +34,40 @@ export default function ForgotPasswordPage() {
           Check your email
         </h1>
         <p className="text-muted-foreground mt-2 mb-6">
-          If an account exists for {email}, you'll receive a password reset link shortly.
+          If an account exists for <span className="font-medium text-foreground">{email}</span>, 
+          you'll receive a password reset link shortly.
         </p>
 
-        <Link to="/login">
-          <Button variant="outline" className="w-full">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to sign in
+        <BannerAlert
+          type="info"
+          message="For security reasons, we don't confirm whether an account exists. Check your spam folder if you don't see the email."
+          className="mb-6 text-left"
+        />
+
+        <div className="space-y-3">
+          <Link to="/login">
+            <Button variant="outline" className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to sign in
+            </Button>
+          </Link>
+
+          <Button 
+            variant="ghost" 
+            className="w-full"
+            onClick={() => {
+              setIsSubmitted(false);
+              setEmail("");
+            }}
+          >
+            Try a different email
           </Button>
-        </Link>
+        </div>
       </div>
     );
   }
 
+  // Request form
   return (
     <div className="auth-card">
       <div className="text-center mb-8">
@@ -50,7 +75,7 @@ export default function ForgotPasswordPage() {
           Forgot password?
         </h1>
         <p className="text-muted-foreground mt-2">
-          Enter your email and we'll send you a reset link
+          No worries, we'll send you reset instructions
         </p>
       </div>
 
@@ -67,13 +92,21 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10"
               required
+              autoComplete="email"
             />
           </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isLoading || !email.trim()}
+        >
           {isLoading ? (
-            "Sending..."
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Sending...
+            </>
           ) : (
             <>
               Send reset link
@@ -84,7 +117,10 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="text-center text-sm text-muted-foreground mt-6">
-        <Link to="/login" className="text-accent hover:underline font-medium inline-flex items-center">
+        <Link 
+          to="/login" 
+          className="text-accent hover:underline font-medium inline-flex items-center"
+        >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to sign in
         </Link>
