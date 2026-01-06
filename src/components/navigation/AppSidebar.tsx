@@ -10,6 +10,7 @@ import {
   FileText,
   Key,
 } from "lucide-react";
+import { GatehouseLogo } from "@/components/branding/GatehouseLogo";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -64,12 +65,10 @@ export function AppSidebar() {
       {/* Logo */}
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center flex-shrink-0">
-            <Shield className="w-4 h-4 text-sidebar-primary-foreground" />
-          </div>
+          <GatehouseLogo size="sm" variant="light" />
           {!collapsed && (
             <span className="text-lg font-semibold text-sidebar-foreground tracking-tight">
-              Authy2
+              Gatehouse
             </span>
           )}
         </div>

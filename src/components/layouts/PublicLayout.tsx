@@ -1,5 +1,5 @@
-import { Shield } from "lucide-react";
 import { Outlet, Link } from "react-router-dom";
+import { GatehouseLogo } from "@/components/branding/GatehouseLogo";
 
 export default function PublicLayout() {
   return (
@@ -10,11 +10,9 @@ export default function PublicLayout() {
       {/* Header */}
       <header className="relative z-10 w-full py-6 px-4">
         <div className="max-w-md mx-auto">
-          <Link to="/" className="flex items-center gap-2 justify-center">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold text-foreground tracking-tight">Authy2</span>
+          <Link to="/" className="flex items-center gap-2.5 justify-center">
+            <GatehouseLogo size="md" />
+            <span className="text-xl font-semibold text-foreground tracking-tight">Gatehouse</span>
           </Link>
         </div>
       </header>
@@ -30,7 +28,7 @@ export default function PublicLayout() {
       <footer className="relative z-10 py-6 px-4">
         <div className="max-w-md mx-auto text-center">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Authy2. Secure identity management.
+            © {new Date().getFullYear()} Gatehouse. Identity & Access.
           </p>
         </div>
       </footer>
