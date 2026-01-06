@@ -61,7 +61,7 @@ export default function OIDCClientsPage() {
         <div>
           <h1 className="page-title">OIDC Clients</h1>
           <p className="page-description">
-            Manage applications that authenticate via Authy2
+            Manage applications that authenticate via Gatehouse
           </p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -75,7 +75,7 @@ export default function OIDCClientsPage() {
             <DialogHeader>
               <DialogTitle>Create OIDC Client</DialogTitle>
               <DialogDescription>
-                Register a new application to authenticate via Authy2
+                Register a new application to authenticate via Gatehouse
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
