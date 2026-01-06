@@ -10,6 +10,7 @@ interface ApiLog {
   method: string;
   url: string;
   requestBody?: unknown;
+  requestHeaders?: Record<string, string>;
   status?: number;
   statusText?: string;
   responseBody?: unknown;
@@ -67,12 +68,31 @@ window.fetch = async function (input, init) {
     requestBody = init?.body;
   }
 
+  // Extract request headers
+  const requestHeaders: Record<string, string> = {};
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => {
+        requestHeaders[key] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([key, value]) => {
+        requestHeaders[key] = value;
+      });
+    } else {
+      Object.entries(init.headers).forEach(([key, value]) => {
+        if (value) requestHeaders[key] = value;
+      });
+    }
+  }
+
   addApiLog({
     id,
     timestamp: new Date(),
     method,
     url,
     requestBody,
+    requestHeaders,
   });
 
   const start = performance.now();
@@ -264,6 +284,18 @@ export default function ApiDevTools() {
                   <div className="text-red-400 font-semibold mb-1">Network Error</div>
                   <div className="text-red-300">{selectedLog.error}</div>
                 </div>
+              )}
+
+              {/* Request Headers (collapsible) */}
+              {selectedLog.requestHeaders && Object.keys(selectedLog.requestHeaders).length > 0 && (
+                <details className="group" open>
+                  <summary className="text-slate-500 cursor-pointer hover:text-slate-400">
+                    Request Headers ({Object.keys(selectedLog.requestHeaders).length})
+                  </summary>
+                  <pre className="bg-slate-800 p-2 rounded text-[10px] overflow-auto text-yellow-400 mt-1">
+                    {JSON.stringify(selectedLog.requestHeaders, null, 2)}
+                  </pre>
+                </details>
               )}
 
               {selectedLog.requestBody && (
