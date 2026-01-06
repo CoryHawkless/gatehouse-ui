@@ -1,7 +1,7 @@
 // API Client for Gatehouse Backend
 // Uses session-based authentication with cookies
 
-const API_BASE = '/api/v1';
+import { config } from '@/config';
 
 interface ApiResponse<T = unknown> {
   version: string;
@@ -58,7 +58,7 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${config.api.baseUrl}${endpoint}`, {
     ...options,
     credentials: 'include', // Important: include session cookies
     headers: {
