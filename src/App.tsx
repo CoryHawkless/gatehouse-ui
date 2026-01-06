@@ -42,44 +42,55 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Index redirect */}
-          <Route path="/" element={<Index />} />
-
-          {/* Public routes */}
-          <Route element={<PublicLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/invite" element={<InviteAcceptPage />} />
-            <Route path="/consent" element={<OIDCConsentPage />} />
-            <Route path="/error" element={<OIDCErrorPage />} />
-          </Route>
-
-          {/* Authenticated routes */}
-          <Route element={<AuthenticatedLayout />}>
-            {/* User routes */}
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/security" element={<SecurityPage />} />
-            <Route path="/linked-accounts" element={<LinkedAccountsPage />} />
-            <Route path="/activity" element={<ActivityPage />} />
-
-            {/* Organization routes */}
-            <Route path="/org" element={<OrgOverviewPage />} />
-            <Route path="/org/members" element={<MembersPage />} />
-            <Route path="/org/policies" element={<PoliciesPage />} />
-            <Route path="/org/audit" element={<OrgAuditPage />} />
-            <Route path="/org/clients" element={<OIDCClientsPage />} />
-          </Route>
-
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+// Separate component so AuthProvider can use useNavigate
+import { AuthProvider } from "@/contexts/AuthContext";
+
+function AppRoutes() {
+  return (
+    <AuthProvider>
+      <Routes>
+        {/* Index redirect */}
+        <Route path="/" element={<Index />} />
+
+        {/* Public routes */}
+        <Route element={<PublicLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/invite" element={<InviteAcceptPage />} />
+          <Route path="/consent" element={<OIDCConsentPage />} />
+          <Route path="/error" element={<OIDCErrorPage />} />
+        </Route>
+
+        {/* Authenticated routes */}
+        <Route element={<AuthenticatedLayout />}>
+          {/* User routes */}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/linked-accounts" element={<LinkedAccountsPage />} />
+          <Route path="/activity" element={<ActivityPage />} />
+
+          {/* Organization routes */}
+          <Route path="/org" element={<OrgOverviewPage />} />
+          <Route path="/org/members" element={<MembersPage />} />
+          <Route path="/org/policies" element={<PoliciesPage />} />
+          <Route path="/org/audit" element={<OrgAuditPage />} />
+          <Route path="/org/clients" element={<OIDCClientsPage />} />
+        </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AuthProvider>
+  );
+}
 
 export default App;

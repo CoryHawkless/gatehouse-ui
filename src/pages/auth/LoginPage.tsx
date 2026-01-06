@@ -1,25 +1,42 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Mail, Lock, ArrowRight, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Mock login - will be replaced with actual auth
-    setTimeout(() => {
+
+    try {
+      await login(email, password, rememberMe);
+    } catch (error) {
+      const message = error instanceof ApiError 
+        ? error.message 
+        : "An unexpected error occurred";
+      
+      toast({
+        variant: "destructive",
+        title: "Sign in failed",
+        description: message,
+      });
+    } finally {
       setIsLoading(false);
-      navigate("/profile");
-    }, 1000);
+    }
   };
 
   return (
@@ -51,15 +68,7 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link
-              to="/forgot-password"
-              className="text-sm text-accent hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -72,6 +81,25 @@ export default function LoginPage() {
               required
             />
           </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+            />
+            <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+              Remember me
+            </Label>
+          </div>
+          <Link
+            to="/forgot-password"
+            className="text-sm text-accent hover:underline"
+          >
+            Forgot password?
+          </Link>
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
