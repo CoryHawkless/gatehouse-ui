@@ -25,8 +25,13 @@ export default function ProfilePage() {
     }
   }, [user?.full_name]);
 
-  // Fetch organizations
+  // Fetch organizations only when user is available
   useEffect(() => {
+    if (!user) {
+      setOrgsLoading(false);
+      return;
+    }
+
     const fetchOrgs = async () => {
       try {
         const response = await api.users.organizations();
@@ -45,7 +50,7 @@ export default function ProfilePage() {
     };
 
     fetchOrgs();
-  }, []);
+  }, [user]);
 
   const getInitials = (fullName: string | null) => {
     if (!fullName) return "?";
