@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, User, ApiError } from '@/lib/api';
+import { api, User, ApiError, tokenManager } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -30,9 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Check session on mount
+  // Check for existing token on mount
   useEffect(() => {
-    const checkSession = async () => {
+    const checkAuth = async () => {
+      // Only attempt to fetch user if we have a valid token
+      if (!tokenManager.hasValidToken()) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await api.users.me();
         setUser(response.user);
@@ -43,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    checkSession();
+    checkAuth();
   }, []);
 
   const login = useCallback(async (email: string, password: string, rememberMe = false) => {

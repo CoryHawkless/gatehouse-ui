@@ -1,5 +1,5 @@
 // API Client for Gatehouse Backend
-// Uses session-based authentication with cookies
+// Uses Bearer token authentication
 
 import { config } from '@/config';
 
@@ -44,14 +44,10 @@ export interface OrganizationsResponse {
   count: number;
 }
 
-export interface Session {
-  id: string;
-  expires_at: string;
-}
-
 export interface LoginResponse {
   user: User;
-  session: Session;
+  token: string;
+  expires_at: string;
 }
 
 export interface ProfileResponse {
@@ -72,22 +68,75 @@ class ApiError extends Error {
   }
 }
 
+// Token storage keys
+const TOKEN_KEY = 'gatehouse_token';
+const TOKEN_EXPIRY_KEY = 'gatehouse_token_expiry';
+
+// Token management
+export const tokenManager = {
+  getToken: (): string | null => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    
+    // Check if token is expired
+    if (token && expiry) {
+      const expiryDate = new Date(expiry);
+      if (expiryDate <= new Date()) {
+        tokenManager.clearToken();
+        return null;
+      }
+    }
+    
+    return token;
+  },
+  
+  setToken: (token: string, expiresAt: string): void => {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(TOKEN_EXPIRY_KEY, expiresAt);
+  },
+  
+  clearToken: (): void => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  },
+  
+  hasValidToken: (): boolean => {
+    return tokenManager.getToken() !== null;
+  },
+};
+
+// Central request function - all API calls go through here
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  requiresAuth = true
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Add Authorization header if we have a token and auth is required
+  if (requiresAuth) {
+    const token = tokenManager.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
   const response = await fetch(`${config.api.baseUrl}${endpoint}`, {
     ...options,
-    credentials: 'include', // Important: include session cookies
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
 
   const json: ApiResponse<T> = await response.json();
 
   if (!json.success) {
+    // Clear token on 401 errors
+    if (json.code === 401) {
+      tokenManager.clearToken();
+    }
+    
     throw new ApiError(
       json.message || 'An error occurred',
       json.code,
@@ -99,18 +148,31 @@ async function request<T>(
   return json.data as T;
 }
 
+// Centralized API client - all routes defined here
 export const api = {
   auth: {
-    login: (email: string, password: string, remember_me = false) =>
-      request<LoginResponse>('/auth/login', {
+    login: async (email: string, password: string, remember_me = false): Promise<LoginResponse> => {
+      const response = await request<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, remember_me }),
-      }),
+      }, false); // Login doesn't require auth
+      
+      // Store token on successful login
+      tokenManager.setToken(response.token, response.expires_at);
+      
+      return response;
+    },
 
-    logout: () =>
-      request<void>('/auth/logout', {
-        method: 'POST',
-      }),
+    logout: async (): Promise<void> => {
+      try {
+        await request<void>('/auth/logout', {
+          method: 'POST',
+        });
+      } finally {
+        // Always clear token on logout
+        tokenManager.clearToken();
+      }
+    },
   },
 
   users: {
