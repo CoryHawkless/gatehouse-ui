@@ -6,12 +6,70 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Organization, ApiError } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
+function ProfileSkeleton() {
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-4 w-80 mt-2" />
+      </div>
+
+      <div className="space-y-6">
+        {/* Personal Information Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-56 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-6">
+              <Skeleton className="w-20 h-20 rounded-full" />
+              <div>
+                <Skeleton className="h-9 w-32" />
+                <Skeleton className="h-3 w-40 mt-2" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Email Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-64 mt-1" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-12 w-full" />
+          </CardContent>
+        </Card>
+
+        {/* Organizations Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-48 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [name, setName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -99,12 +157,8 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  if (!user) {
-    return (
-      <div className="page-container flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (authLoading || !user) {
+    return <ProfileSkeleton />;
   }
 
   return (
@@ -209,8 +263,9 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             {orgsLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="space-y-2">
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
               </div>
             ) : organizations.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
