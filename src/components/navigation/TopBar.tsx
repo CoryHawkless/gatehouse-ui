@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, ChevronDown, LogOut, User, Shield, Building2 } from "lucide-react";
+import { Menu, ChevronDown, LogOut, User, Shield, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -12,29 +12,45 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-// Mock user data - will be replaced with real auth context
-const mockUser = {
-  name: "John Doe",
-  email: "john@example.com",
-  avatar: null,
-  initials: "JD",
-};
-
-// Mock organization data
-const mockOrgs = [
-  { id: "1", name: "Acme Corp", role: "admin" },
-  { id: "2", name: "Beta Inc", role: "member" },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { api, Organization } from "@/lib/api";
 
 export function TopBar() {
   const navigate = useNavigate();
-  const [currentOrg, setCurrentOrg] = useState(mockOrgs[0]);
+  const { user, isAuthenticated } = useAuth();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
+  const [orgsLoading, setOrgsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchOrgs() {
+      if (!isAuthenticated) {
+        setOrgsLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await api.users.organizations();
+        setOrganizations(response.organizations);
+        if (response.organizations.length > 0 && !currentOrg) {
+          setCurrentOrg(response.organizations[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organizations:", error);
+      } finally {
+        setOrgsLoading(false);
+      }
+    }
+    fetchOrgs();
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
-    // Will be replaced with actual logout logic
     navigate("/login");
   };
+
+  const userInitials = user?.full_name
+    ? user.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || "U";
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 flex-shrink-0">
@@ -54,7 +70,9 @@ export function TopBar() {
               <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
                 <Building2 className="w-3.5 h-3.5 text-primary" />
               </div>
-              <span className="text-sm font-medium hidden sm:inline">{currentOrg.name}</span>
+              <span className="text-sm font-medium hidden sm:inline">
+                {orgsLoading ? "Loading..." : (currentOrg?.name || "No Organization")}
+              </span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
@@ -63,23 +81,33 @@ export function TopBar() {
               Switch Organization
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {mockOrgs.map((org) => (
-              <DropdownMenuItem
-                key={org.id}
-                onClick={() => setCurrentOrg(org)}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <span>{org.name}</span>
-                </div>
-                {org.role === "admin" && (
-                  <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">
-                    Admin
-                  </span>
-                )}
-              </DropdownMenuItem>
-            ))}
+            {orgsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : organizations.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                No organizations
+              </div>
+            ) : (
+              organizations.map((org) => (
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => setCurrentOrg(org)}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <span>{org.name}</span>
+                  </div>
+                  {org.role && ["owner", "admin"].includes(org.role) && (
+                    <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded capitalize">
+                      {org.role}
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -88,9 +116,9 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 h-9 px-2">
               <Avatar className="w-7 h-7">
-                <AvatarImage src={mockUser.avatar || undefined} />
+                <AvatarImage src={user?.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {mockUser.initials}
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
               <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
@@ -99,9 +127,9 @@ export function TopBar() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col">
-                <span className="font-medium">{mockUser.name}</span>
+                <span className="font-medium">{user?.full_name || "User"}</span>
                 <span className="text-xs text-muted-foreground font-normal">
-                  {mockUser.email}
+                  {user?.email}
                 </span>
               </div>
             </DropdownMenuLabel>
